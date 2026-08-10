@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>项目看板操作台 V{{VERSION}}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f1f5f9; color: #1e293b; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  .wrap { max-width: 820px; margin: 32px auto; padding: 0 16px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: #64748b; font-size: 13px; margin-bottom: 20px; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px 20px; margin-bottom: 16px; }
+  .card h2 { font-size: 15px; margin: 0 0 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  input[type=file] { flex: 1; min-width: 220px; }
+  button { border: 0; border-radius: 8px; padding: 9px 16px; font-size: 14px; cursor: pointer; }
+  .primary { background: #2563eb; color: #fff; }
+  .primary:hover { background: #1d4ed8; }
+  .ghost { background: #e2e8f0; color: #334155; }
+  .ghost:hover { background: #cbd5e1; }
+  .danger { background: #fee2e2; color: #b91c1c; }
+  .danger:hover { background: #fecaca; }
+  #result { display: none; }
+  .good { border-left: 4px solid #16a34a; background: #f0fdf4; padding: 12px 14px; border-radius: 6px; }
+  .bad { border-left: 4px solid #dc2626; background: #fef2f2; padding: 12px 14px; border-radius: 6px; }
+  .warn { border-left: 4px solid #d97706; background: #fffbeb; padding: 12px 14px; border-radius: 6px; }
+  pre { white-space: pre-wrap; word-break: break-all; margin: 6px 0 0; font-size: 13px; font-family: inherit; }
+  .meta { color: #64748b; font-size: 12px; margin-top: 10px; }
+  .stat { display: inline-block; margin-right: 18px; }
+  .stat b { font-size: 18px; }
+  .actions { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px; }
+  a.btn { display: inline-block; text-decoration: none; border-radius: 8px; padding: 9px 16px; font-size: 14px; background: #2563eb; color: #fff; }
+  #selfcheck-result { margin-top: 10px; font-size: 13px; color: #334155; }
+  footer { color: #94a3b8; font-size: 12px; text-align: center; margin: 24px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>项目看板操作台</h1>
+  <div class="sub">本地单机工具 · 完全离线 · 数据不出本机（仅监听 127.0.0.1）</div>
+
+  <div class="card">
+    <h2>1. 选择数据文件</h2>
+    <div class="row">
+      <input type="file" id="file" accept=".xlsx,.xlsm">
+      <button class="primary" id="generate">生成并分析看板</button>
+    </div>
+    <div class="meta">数据源为 16 字段 Excel 模板（家电产品项目_任务数据.xlsx 同结构）。</div>
+  </div>
+
+  <div class="card" id="result">
+    <h2>2. 分析结果</h2>
+    <div id="summary"></div>
+    <div class="actions">
+      <a class="btn" id="open-dashboard" target="_blank" href="#">打开看板</a>
+      <a class="btn" id="download-dashboard" href="#">下载 HTML</a>
+      <button class="ghost" id="again">继续分析其他文件</button>
+    </div>
+    <div class="meta" id="saved-path"></div>
+  </div>
+
+  <div class="card">
+    <h2>3. 环境自检</h2>
+    <button class="ghost" id="selfcheck">运行环境自检</button>
+    <div id="selfcheck-result"></div>
+  </div>
+
+  <div class="card">
+    <button class="danger" id="quit">退出操作台</button>
+  </div>
+
+  <footer>项目看板操作台 V{{VERSION}} · 关掉这个标签页，操作台会在闲置若干分钟后自动退出</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fileInput = $("file");
+
+async function postRaw(url, body) {
+  const resp = await fetch(url, { method: "POST", body });
+  return resp.json();
+}
+
+function showErrors(errors) {
+  $("result").style.display = "block";
+  const items = (errors || []).map(e => {
+    const where = e.where ? `（${e.where}）` : "";
+    const hint = e.hint ? `\n提示：${e.hint}` : "";
+    return `${e.level === "warning" ? "[提示]" : "[错误]"} ${e.message}${where}${hint}`;
+  }).join("\n");
+  $("summary").innerHTML = `<div class="bad"><pre>${esc(items || "处理失败，请检查文件后重试。")}</pre></div>`;
+  $("open-dashboard").style.display = "none";
+  $("download-dashboard").style.display = "none";
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+$("generate").addEventListener("click", async () => {
+  const file = fileInput.files[0];
+  if (!file) { alert("请先选择 Excel 文件"); return; }
+  $("generate").disabled = true;
+  $("generate").textContent = "正在分析…";
+  try {
+    const data = await postRaw("/api/generate?filename=" + encodeURIComponent(file.name), file);
+    if (!data.ok) { showErrors(data.errors); return; }
+    $("result").style.display = "block";
+    const warnHtml = data.warnings && data.warnings.length
+      ? `<div class="warn" style="margin-top:10px"><b>数据提示 ${data.warnings.length} 条：</b><pre>${esc(data.warnings.join("\n"))}</pre></div>` : "";
+    $("summary").innerHTML =
+      `<div class="good"><b>分析完成</b>
+       <div style="margin-top:10px">
+         <span class="stat">任务数 <b>${data.taskCount}</b></span>
+         <span class="stat">里程碑 <b>${data.milestoneCount}</b></span>
+         <span class="stat">关键路径 <b>${data.criticalCount}</b> 条</span>
+         <span class="stat">关键链工期 <b>${data.criticalDuration}</b> 天</span>
+       </div>${warnHtml}</div>`;
+    $("open-dashboard").href = data.dashboardUrl;
+    $("open-dashboard").style.display = "";
+    $("download-dashboard").href = data.downloadUrl;
+    $("download-dashboard").style.display = "";
+    $("saved-path").textContent = "已保存到：" + data.savedPath;
+  } catch (err) {
+    showErrors([{ level: "error", where: "", message: "请求失败：" + err, hint: "" }]);
+  } finally {
+    $("generate").disabled = false;
+    $("generate").textContent = "生成并分析看板";
+  }
+});
+
+$("again").addEventListener("click", () => {
+  fileInput.value = "";
+  $("result").style.display = "none";
+  fileInput.focus();
+});
+
+$("selfcheck").addEventListener("click", async () => {
+  try {
+    const resp = await fetch("/api/selfcheck");
+    const d = await resp.json();
+    const status = d.ok ? "✅ 正常" : "❌ 异常";
+    $("selfcheck-result").textContent =
+      `${status} · 版本 ${d.version} · Python ${d.python}/${d.arch} · openpyxl ${d.openpyxl} · 前端资源${d.assetsOk ? "完整" : "缺失"} · 输出目录${d.dataDirWritable ? "可写" : "不可写"} · 端口 ${d.port}`;
+  } catch (err) {
+    $("selfcheck-result").textContent = "自检请求失败：" + err;
+  }
+});
+
+$("quit").addEventListener("click", async () => {
+  stopHeartbeat();
+  try { await fetch("/api/quit", { method: "POST" }); } catch (e) {}
+  document.querySelector(".wrap").innerHTML =
+    '<h1>操作台已退出</h1><div class="sub">进程已经结束，可以直接关闭这个标签页。</div>';
+  setTimeout(() => { window.close(); }, 300);
+});
+
+// 心跳：让操作台知道页面还开着。标签一关心跳就断，服务端闲置到点自行退出，
+// 不会像旧版那样留下一个 Dock 里点不动、Cmd+Q 也杀不掉的后台进程。
+let beat = null;
+function stopHeartbeat() { if (beat) { clearInterval(beat); beat = null; } }
+function ping() { fetch("/api/ping", { method: "POST" }).catch(() => {}); }
+beat = setInterval(ping, 30000);
+ping();
+window.addEventListener("pagehide", stopHeartbeat);
+</script>
+</body>
+</html>

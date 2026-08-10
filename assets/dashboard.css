@@ -1,0 +1,315 @@
+:root {
+  --bg: #f3f5f9;
+  --card: #ffffff;
+  --line: #e5e7eb;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --accent: #1f4e79;
+  --complete: #16a34a;
+  --progress: #2563eb;
+  --review: #f59e0b;
+  --todo: #9ca3af;
+  --overdue: #dc2626;
+  --warning: #d97706;
+  --blocked: #7c3aed;
+  --weekend: rgba(244,63,94,.07);
+  /* 布局常量：甘特左右两列的高度/宽度全部由此派生，避免两列各写死后逐行漂移 */
+  --day-w: 28px;
+  --label-w: 320px;
+  --head-h: 56px;
+  --group-h: 36px;
+  --row-h: 56px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.page { max-width: 1500px; margin: 0 auto; padding: 20px 24px 48px; }
+.topbar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 8px 20px; padding: 16px 20px; background: var(--card);
+  border: 1px solid var(--line); border-radius: 12px; margin-bottom: 16px;
+}
+.topbar h1 { margin: 0; font-size: 20px; }
+.topbar .sub { color: var(--muted); font-size: 13px; }
+.meta { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.issue-chip {
+  font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 999px; cursor: pointer;
+  border: 1px solid #fcd34d; background: #fffbeb; color: #92400e;
+}
+.issue-chip:hover { background: #fef3c7; }
+.issue-chip[aria-expanded="true"] { background: #fde68a; }
+.issues {
+  background: var(--card); border: 1px solid #fcd34d; border-left: 3px solid #f59e0b;
+  border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px;
+}
+.issues ol { margin: 0; padding-left: 20px; }
+.issues li { margin: 4px 0; color: var(--text); }
+.issues .where { color: var(--muted); margin-right: 6px; }
+.issues .hint { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.meta b { color: var(--text); }
+
+/* 8 张卡固定列数，避免 auto-fit 在中间宽度下断成 5+3 的参差两行 */
+.stats { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.stat {
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; text-align: center; min-width: 0;
+}
+.stat .num { font-size: 24px; font-weight: 700; line-height: 1.25; white-space: nowrap; }
+.stat .label { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat.total .num { color: var(--text); }
+.stat.completed .num { color: var(--complete); }
+.stat.inprogress .num { color: var(--progress); }
+.stat.review .num { color: var(--review); }
+.stat.blocked .num { color: var(--blocked); }
+.stat.overdue .num { color: var(--overdue); }
+.stat.msrate .num { color: #0d9488; }
+.stat.weekdue .num { color: #0ea5e9; }
+
+/* 栅格化：每组落在等宽单元格里，标题行对齐；「全选/清空」提到标题行右侧，
+   不再跟在长度不一的 chips 后面而高低参差 */
+.slicers {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 24px;
+  padding: 14px 16px; background: var(--card); border: 1px solid var(--line);
+  border-radius: 10px; margin-bottom: 16px;
+}
+.slicer-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.slicer-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 20px; }
+.slicer-label { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.slicer-chips { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
+.slicer-tools { display: flex; gap: 6px; flex: 0 0 auto; }
+.chip {
+  font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: #fff; color: var(--text); cursor: pointer;
+}
+.chip:hover { background: #f0f2f5; }
+.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tool-btn {
+  font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 6px;
+  border: 1px solid var(--line); background: #f8fafc; color: var(--muted); cursor: pointer;
+}
+.tool-btn:hover { background: #eef2f7; color: var(--text); }
+.tool-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.gantt-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.search-box { display: flex; align-items: center; gap: 6px; }
+.search-box input {
+  font: inherit; font-size: 13px; padding: 4px 10px; min-width: 210px;
+  border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--text);
+}
+.search-box input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.unit-switch { display: flex; gap: 4px; }
+
+/* 固定 3 列：auto-fit 在两列宽度下会把第 3 张拉成双宽，与前两张明显不等高 */
+.charts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
+.chart-card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px 14px; min-width: 0;
+}
+.chart-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.chart-body { max-width: 560px; margin: 0 auto; }
+.chart-body svg { width: 100%; height: auto; display: block; }
+
+.panel {
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 16px;
+}
+.panel-head {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 8px 16px; margin-bottom: 10px;
+}
+.panel-head h2 { margin: 0; font-size: 16px; }
+.panel-sub { color: var(--muted); font-size: 12px; }
+.pivot-controls { display: flex; flex-wrap: wrap; gap: 12px; }
+.pivot-controls label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.pivot-controls select {
+  font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line);
+  border-radius: 8px; background: #fff; color: var(--text);
+}
+.pivot-wrap { overflow: auto; max-height: 62vh; }
+/* separate + 单边框：collapse 模式下 sticky 单元格的边框会被“留在原地”，横滚时错位 */
+.pivot-table {
+  border-collapse: separate; border-spacing: 0; font-size: 13px; min-width: 100%;
+  border-top: 1px solid var(--line); border-left: 1px solid var(--line);
+}
+.pivot-table th, .pivot-table td {
+  border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  padding: 6px 12px; text-align: center; white-space: nowrap; background: var(--card);
+}
+.pivot-table thead th, .pivot-table tbody th {
+  background: #f8fafc; font-weight: 600; color: var(--text);
+}
+.pivot-table thead th { position: sticky; top: 0; z-index: 2; }
+.pivot-table tbody th { position: sticky; left: 0; z-index: 1; text-align: left; }
+/* 表头首格必须同时冻结横纵，否则横滚时它跟着跑、与下方行名脱节 */
+.pivot-table thead th:first-child { left: 0; z-index: 3; text-align: left; }
+.pivot-table .total, .pivot-table .total-row th, .pivot-table .total-row td {
+  background: #eef2f7; font-weight: 600;
+}
+.pivot-empty { padding: 24px; text-align: center; color: var(--muted); }
+
+.board { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.board-scroll { overflow: auto; max-height: 72vh; }
+/* flex + 显式定宽：时间轴列宽 = 天数 x 日宽，表头刻度与泳道共用同一宽度，
+   横向滚动时不会出现「刻度是一套、条形是另一套」的错位 */
+.gantt { display: flex; align-items: flex-start; width: max-content; min-width: 100%; }
+.gantt.is-empty { display: block; width: auto; }
+.col-labels {
+  flex: 0 0 var(--label-w); width: var(--label-w);
+  position: sticky; left: 0; z-index: 6;
+  background: var(--card); border-right: 1px solid var(--line);
+}
+.col-timeline { position: relative; flex: 0 0 auto; width: var(--tl-w, 100%); }
+
+.thead {
+  display: flex; position: sticky; top: 0; z-index: 4;
+  height: var(--head-h); background: var(--card); border-bottom: 1px solid var(--line);
+}
+.col-labels .thead { z-index: 7; }
+.thead .label-head { width: 100%; display: flex; align-items: center; padding: 0 12px; font-weight: 600; }
+.thead .time-head { flex: 1 1 auto; min-width: 0; position: relative; }
+.time-head .week-row { display: flex; height: 27px; }
+.time-head .day-row { display: flex; height: 28px; }
+/* 周格按整周合并（7 x 日宽），标签不再挤在 28px 里换行压住日号 */
+.time-head .week {
+  flex: 0 0 auto; line-height: 27px; padding-left: 5px; font-size: 11px;
+  color: var(--muted); white-space: nowrap; overflow: hidden;
+  box-shadow: inset 1px 0 0 var(--line);
+}
+.day-row .day {
+  flex: 0 0 var(--day-w); width: var(--day-w); line-height: 28px; text-align: center;
+  font-size: 10px; color: var(--muted); box-shadow: inset 1px 0 0 var(--line);
+  /* 粗粒度下这一行放的是 "MM-DD"，不禁止换行会折成两行并溢出到下面的分组条里 */
+  white-space: nowrap; overflow: hidden;
+}
+.day-row .day.we { background: var(--weekend); color: #b91c1c; }
+.day-row .day.m1 { color: var(--accent); font-weight: 700; }
+.today-flag {
+  position: absolute; bottom: 3px; transform: translateX(-50%); z-index: 3;
+  background: #e11d48; color: #fff; font-size: 10px; line-height: 15px;
+  padding: 0 6px; border-radius: 4px; white-space: nowrap; pointer-events: none;
+}
+
+.group-row {
+  height: var(--group-h); line-height: calc(var(--group-h) - 2px); padding: 0 12px;
+  font-weight: 600; font-size: 13px; background: #eef2f7;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.group-row-time {
+  height: var(--group-h); background: #eef2f7;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.row { display: flex; height: var(--row-h); border-bottom: 1px solid #f1f3f6; }
+.row:hover { background: #fafbfd; }
+.row.selected { background: #eff6ff; }
+.row-label {
+  width: 100%; padding: 0 12px; overflow: hidden; cursor: pointer;
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+}
+.row-label:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.row-title { display: flex; align-items: center; gap: 6px; font-weight: 500; min-width: 0; line-height: 20px; }
+.row-title .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.id-chip {
+  flex: 0 0 auto; font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 4px;
+  background: #eef2f7; color: #475569; border: 1px solid #dbe2ea;
+}
+.milestone-chip {
+  flex: 0 0 auto; font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 4px;
+  background: #fdf4ff; color: #7c3aed; border: 1px solid #e9d5ff;
+}
+.crit-chip {
+  flex: 0 0 auto; font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 4px;
+  background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; font-weight: 600;
+}
+.row-sub {
+  font-size: 12px; line-height: 16px; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* 两层背景：周末底色按 7 天平铺并用 --wk-x 对齐首个周六；网格线落在每格起点，
+   与表头日格的 inset 左线同相（旧版渐变画在 27px 处，比表头整体差 1px） */
+.lane {
+  position: relative; flex: 1 1 auto; height: 100%;
+  background-image:
+    linear-gradient(to right, var(--weekend) 0, var(--weekend) var(--wk-w, 56px), transparent var(--wk-w, 56px)),
+    linear-gradient(to right, var(--line) 0, var(--line) 1px, transparent 1px);
+  background-size: var(--wk-period, 196px) 100%, var(--grid-w, 28px) 100%;
+  background-position: var(--wk-x, 0px) 0, var(--grid-x, 0px) 0;
+  background-repeat: repeat;
+}
+/* 月视图的月长不等，网格线改用少量绝对定位竖线，保证与表头月格严格对齐 */
+.unit-line {
+  position: absolute; top: var(--head-h); bottom: 0; width: 1px;
+  background: var(--line); z-index: 1; pointer-events: none;
+}
+.bar {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  height: 22px; border-radius: 6px;
+  color: #fff; font-size: 11px; line-height: 22px; padding: 0 8px;
+  overflow: hidden; white-space: nowrap; cursor: pointer; min-width: 10px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.18); z-index: 2;
+}
+.bar .fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: rgba(255,255,255,.28); border-radius: 6px 0 0 6px;
+}
+.bar .text { position: relative; z-index: 1; }
+.bar.completed { background: var(--complete); }
+.bar.inprogress { background: var(--progress); }
+.bar.review { background: var(--review); }
+.bar.notstarted { background: var(--todo); }
+.bar.overdue { background: var(--overdue); }
+.bar.warning { background: var(--warning); }
+.bar.blocked { background: var(--blocked); }
+.bar.critical { box-shadow: 0 0 0 2px #be123c, 0 1px 2px rgba(0,0,0,.18); }
+.lane .milestone.critical { border-color: #be123c; }
+/* 里程碑跨多天时补一条浅色区间条，避免整行只剩一个菱形像是漏渲染 */
+.ms-span {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  height: 6px; border-radius: 3px; background: rgba(124,58,237,.16); z-index: 1;
+}
+.lane .milestone {
+  position: absolute; top: 50%; width: 14px; height: 14px; z-index: 3;
+  transform: translateY(-50%) rotate(45deg); border: 2px solid #fff; cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.lane .milestone.completed { background: var(--complete); }
+.lane .milestone.inprogress { background: var(--progress); }
+.lane .milestone.review { background: var(--review); }
+.lane .milestone.notstarted { background: var(--todo); }
+.lane .milestone.overdue { background: var(--overdue); }
+.lane .milestone.warning { background: var(--warning); }
+.lane .milestone.blocked { background: var(--blocked); }
+.today-line {
+  position: absolute; top: var(--head-h); bottom: 0; width: 2px; background: #e11d48;
+  z-index: 3; pointer-events: none;
+}
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.legend .dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.empty { padding: 40px; text-align: center; color: var(--muted); }
+
+.detail {
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 16px; margin-bottom: 16px; display: none;
+}
+.detail.show { display: block; }
+.detail h3 { margin: 0 0 8px; font-size: 15px; }
+.detail .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 20px; }
+.detail .item span { color: var(--muted); font-size: 12px; display: block; }
+@media (max-width: 1280px) { .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 1180px) {
+  .charts { grid-template-columns: minmax(0, 1fr); }
+  .slicers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px)  { .gantt { --label-w: 240px; } }
+@media (max-width: 640px) {
+  .page { padding: 12px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .slicers { grid-template-columns: minmax(0, 1fr); }
+}

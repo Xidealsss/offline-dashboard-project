@@ -1,0 +1,34 @@
+[
+  {
+    "rows": 200,
+    "years": 1,
+    "build_s": 0.015,
+    "render_s": 0.001,
+    "html_mb": 0.16,
+    "tasks": 200
+  },
+  {
+    "rows": 500,
+    "years": 3,
+    "build_s": 0.036,
+    "render_s": 0.001,
+    "html_mb": 0.32,
+    "tasks": 500
+  },
+  {
+    "rows": 800,
+    "years": 3,
+    "build_s": 0.059,
+    "render_s": 0.002,
+    "html_mb": 0.49,
+    "tasks": 800
+  },
+  {
+    "rows": 2000,
+    "years": 5,
+    "build_s": 0.158,
+    "render_s": 0.006,
+    "html_mb": 1.15,
+    "tasks": 2000
+  }
+]

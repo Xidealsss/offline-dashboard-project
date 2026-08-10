@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>项目看板 · 离线飞书式仪表盘</title>
+<link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <div>
+      <h1 id="projectName">项目看板</h1>
+      <div class="sub" id="todayText"></div>
+    </div>
+    <div class="meta">
+      <button type="button" class="issue-chip" id="issueChip" hidden aria-expanded="false"></button>
+      预警提前 <b id="warnDays"></b> 天 · <span id="workdays"></span> · 生成于 <span id="buildDate"></span>
+    </div>
+  </header>
+
+  <section class="issues" id="issuePanel" hidden aria-label="数据提示"></section>
+
+  <section class="stats" id="stats" aria-label="指标卡"></section>
+
+  <section class="slicers" id="slicers" aria-label="切片器"></section>
+
+  <section class="charts" id="charts" aria-label="项目统计柱状图"></section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>透视表</h2>
+      <div class="pivot-controls">
+        <label>行维度 <select id="pivotRow"></select></label>
+        <label>列维度 <select id="pivotCol"></select></label>
+        <label>统计值 <select id="pivotVal"></select></label>
+      </div>
+    </div>
+    <div class="pivot-wrap" id="pivotWrap"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>甘特图</h2>
+      <div class="gantt-tools">
+        <div class="search-box">
+          <input type="search" id="search" placeholder="搜索任务 / 负责人 / 交付物" aria-label="搜索任务">
+          <button type="button" class="tool-btn" id="searchClear">清除</button>
+        </div>
+        <div class="unit-switch" id="unitSwitch" role="group" aria-label="时间粒度"></div>
+      </div>
+      <div class="panel-sub" id="ganttSub"></div>
+    </div>
+    <div class="board">
+      <div class="board-scroll">
+        <div class="gantt" id="gantt"></div>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <div class="detail" id="detail" aria-live="polite"></div>
+</div>
+<script src="data.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>
