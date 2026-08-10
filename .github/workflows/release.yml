@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: 构建 Mac 应用并发布
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: 安装打包依赖
+        run: python -m pip install pyinstaller==6.22.0 openpyxl==3.1.5
+
+      - name: 构建 Mac 应用
+        run: pyinstaller 看板操作台.spec --noconfirm --clean
+
+      - name: 冻结包自检
+        run: dist/看板操作台.app/Contents/MacOS/看板操作台 --smoke-test
+
+      - name: 打分发 zip
+        run: |
+          cd dist
+          zip -r -y 看板操作台_Mac.zip 看板操作台.app
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: kanban-macos-app
+          path: dist/看板操作台_Mac.zip
+
+      - name: 创建 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/看板操作台_Mac.zip \
+            --title "离线看板进阶 $GITHUB_REF_NAME" \
+            --notes "自动构建产物（仅支持 Apple 芯片 Mac）。完整变更说明见 变更记录.md。"
